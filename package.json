@@ -1,3 +1,16 @@
-"dependencies": {
-  "@supabase/supabase-js": "^2.35.0"
+{
+  "name": "redirect-system",
+  "version": "1.0.0",
+  "description": "Supabase-based redirect system with admin panel and analytics",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.35.0"
+  },
+  "keywords": ["redirect", "supabase", "analytics"],
+  "author": "Your Name",
+  "license": "MIT"
 }
