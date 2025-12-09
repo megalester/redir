@@ -51,7 +51,7 @@
         </div>
       </div>
       <div class="muted" style="margin-top:8px">
-        Generated redirect will be saved on server via KV.
+        Generated redirect will be saved on server via Supabase.
       </div>
     </div>
 
@@ -80,7 +80,6 @@
 </div>
 
 <script>
-// DOM elements
 const destInput = document.getElementById('destUrl');
 const genBtn = document.getElementById('genBtn');
 const redirectsBody = document.getElementById('redirectsBody');
@@ -139,24 +138,16 @@ async function loadRedirects(){
     const res = await fetch('/api/list');
     const data = await res.json();
     renderRedirects(data.redirects || []);
-  } catch(err) {
-    redirectsArea.innerText = 'Failed to load redirects';
+  } catch(e){
+    redirectsArea.innerText='Failed to load redirects';
   }
 }
 
 // Delete redirect via API
 async function deleteRedirect(slug){
   if(!confirm("Delete redirect "+slug+"?")) return;
-  try {
-    await fetch('/api/add', { 
-      method:'POST', 
-      headers:{'Content-Type':'application/json'}, 
-      body:JSON.stringify({slug,delete:true}) 
-    });
-    loadRedirects();
-  } catch(err){
-    alert('Failed to delete redirect: '+err.message);
-  }
+  await fetch('/api/add', { method: 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({slug,delete:true}) });
+  loadRedirects();
 }
 
 // Load analytics
@@ -176,7 +167,7 @@ async function loadAnalytics(){
     });
     analyticsArea.innerText=`${rows.length} clicks recorded`;
     analyticsTable.style.display=rows.length?'':'none';
-  } catch(err){
+  } catch(e){
     analyticsArea.innerText='Failed to load analytics';
   }
 }
@@ -200,10 +191,10 @@ genBtn.onclick = async ()=>{
       loadRedirects();
       loadAnalytics();
     } else {
-      alert('❌ Failed to create redirect: '+data.error);
+      alert('❌ Failed to create redirect: '+(data.error || 'Unknown error'));
     }
-  } catch(err){
-    alert('❌ Failed to create redirect: '+err.message);
+  } catch(e){
+    alert('❌ Failed to create redirect: '+e.message);
   }
 }
 
