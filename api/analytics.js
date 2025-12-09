@@ -6,17 +6,19 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
+  if (req.method !== 'GET') return res.status(405).json({ error: 'GET only' });
+
   try {
     const { data, error } = await supabase
       .from('analytics')
       .select('*')
       .order('timestamp', { ascending: false })
       .limit(200);
-
     if (error) throw error;
 
-    res.status(200).json({ analytics: data });
+    res.status(200).json({ analytics: data || [] });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Supabase error:', err);
+    res.status(500).json({ error: err.message || 'Server error' });
   }
 }
