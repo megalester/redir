@@ -1,11 +1,12 @@
+// /api/add.js
 import { supabase } from './supabaseClient.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { slug, destination, subdomain, delete: del } = req.body;
-
   try {
+    const { slug, destination, subdomain, delete: del } = req.body;
+
     if (del) {
       const { error } = await supabase.from('redirects').delete().eq('slug', slug);
       if (error) throw error;
