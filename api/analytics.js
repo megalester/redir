@@ -2,16 +2,16 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-// Log env vars for debugging
-console.log('SUPABASE_URL:', supabaseUrl);
-console.log('SUPABASE_SERVICE_ROLE_KEY:', supabaseKey?.slice(0, 4) + '...');
-
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default async function handler(req, res) {
+  console.log('Analytics API called');
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('Missing Supabase env vars');
+    return res.status(500).json({ error: 'Supabase environment variables not set' });
+  }
+
   try {
-    // Fetch last 200 clicks
     const { data, error } = await supabase
       .from('analytics')
       .select('*')
