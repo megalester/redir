@@ -89,30 +89,34 @@ const analyticsBody = document.getElementById('analyticsBody');
 const analyticsArea = document.getElementById('analyticsArea');
 const analyticsTable = document.getElementById('analyticsTable');
 
-// Subdomains
 const subdomains = ["gd2","yrn","8jr"];
-function pickSubdomain(slug) {
+function pickSubdomain(slug){
   let hash=0;
   for(let i=0;i<slug.length;i++){hash=(hash<<5)-hash+slug.charCodeAt(i);hash|=0;}
   return subdomains[Math.abs(hash)%subdomains.length];
 }
+function generateSlug(length=6){return Math.random().toString(36).substring(2,2+length);}
 
-// Generate random slug
-function generateSlug(length=6){
-  return Math.random().toString(36).substring(2,2+length);
+async function loadRedirects(){
+  try {
+    const res = await fetch('/api/list');
+    const data = await res.json();
+    renderRedirects(data.redirects || []);
+  } catch(err){
+    console.error(err);
+    redirectsArea.innerText='Failed to load redirects';
+    redirectsTable.style.display='none';
+  }
 }
 
-// Render redirects table
 function renderRedirects(redirects){
   redirectsBody.innerHTML='';
   redirects.slice().reverse().forEach(r=>{
-    const slug = r.slug;
-    const dest = r.destination;
-    const sub = r.subdomain || 'gd2';
-    const domain = window.location.hostname.split('.').slice(-2).join('.');
-    const shortUrl = `https://${sub}.${domain}/${slug}`;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td style="max-width:320px;word-break:break-all"><a href="${shortUrl}" target="_blank">${shortUrl}</a></td>
+    const slug = r.slug, dest=r.destination, sub=r.subdomain||'gd2';
+    const domain=window.location.hostname.split('.').slice(-2).join('.');
+    const shortUrl=`https://${sub}.${domain}/${slug}`;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td style="max-width:320px;word-break:break-all"><a href="${shortUrl}" target="_blank">${shortUrl}</a></td>
                     <td style="max-width:420px;word-break:break-all">${dest}</td>
                     <td class="flex">
                       <button data-slug="${slug}" class="btn copyBtn" style="padding:6px 8px">Copy</button>
@@ -122,44 +126,28 @@ function renderRedirects(redirects){
   });
   redirectsArea.innerText=`${redirects.length} redirect(s)`;
   redirectsTable.style.display=redirects.length?'':'none';
-
-  // Attach copy/delete events
-  document.querySelectorAll('.copyBtn').forEach(btn=>{
-    btn.onclick=()=>{navigator.clipboard.writeText(btn.dataset.slug); alert("Copied slug: "+btn.dataset.slug);}
-  });
-  document.querySelectorAll('.deleteBtn').forEach(btn=>{
-    btn.onclick=()=>deleteRedirect(btn.dataset.slug);
-  });
+  document.querySelectorAll('.copyBtn').forEach(btn=>{btn.onclick=()=>{navigator.clipboard.writeText(btn.dataset.slug);alert("Copied slug: "+btn.dataset.slug);}});
+  document.querySelectorAll('.deleteBtn').forEach(btn=>{btn.onclick=()=>deleteRedirect(btn.dataset.slug);});
 }
 
-// Fetch redirects from API
-async function loadRedirects(){
-  try {
-    const res = await fetch('/api/list');
-    const data = await res.json();
-    renderRedirects(data.redirects || []);
-  } catch(e){
-    redirectsArea.innerText='Failed to load redirects';
-  }
-}
-
-// Delete redirect via API
 async function deleteRedirect(slug){
   if(!confirm("Delete redirect "+slug+"?")) return;
-  await fetch('/api/add', { method: 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({slug,delete:true}) });
-  loadRedirects();
+  try{
+    const res = await fetch('/api/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug,delete:true})});
+    await res.json();
+    loadRedirects();
+  } catch(err){console.error(err);}
 }
 
-// Load analytics
 async function loadAnalytics(){
-  try {
+  try{
     const res = await fetch('/api/analytics');
     const data = await res.json();
     const rows = data.analytics || [];
     analyticsBody.innerHTML='';
     rows.slice(-200).reverse().forEach(rec=>{
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${new Date(rec.timestamp).toLocaleString()}</td>
+      tr.innerHTML=`<td>${new Date(rec.timestamp).toLocaleString()}</td>
                       <td style="max-width:220px;word-break:break-all">${rec.slug}</td>
                       <td>${rec.country||'XX'}</td>
                       <td style="max-width:420px;word-break:break-all">${rec.ua||''}</td>`;
@@ -167,40 +155,21 @@ async function loadAnalytics(){
     });
     analyticsArea.innerText=`${rows.length} clicks recorded`;
     analyticsTable.style.display=rows.length?'':'none';
-  } catch(e){
-    analyticsArea.innerText='Failed to load analytics';
-  }
+  }catch(err){console.error(err); analyticsArea.innerText='Failed to load analytics'; analyticsTable.style.display='none';}
 }
 
-// Generate redirect
-genBtn.onclick = async ()=>{
+genBtn.onclick=async ()=>{
   const destination = destInput.value.trim();
   if(!destination) return alert('Enter destination URL');
   const slug = generateSlug();
   const subdomain = pickSubdomain(slug);
-  try {
-    const res = await fetch('/api/add',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({slug,destination,subdomain})
-    });
+  try{
+    const res = await fetch('/api/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug,destination,subdomain})});
     const data = await res.json();
-    if(data.success){
-      alert('✅ Redirect created! Slug: '+slug);
-      destInput.value='';
-      loadRedirects();
-      loadAnalytics();
-    } else {
-      alert('❌ Failed to create redirect: '+(data.error || 'Unknown error'));
-    }
-  } catch(e){
-    alert('❌ Failed to create redirect: '+e.message);
-  }
+    if(data.success){alert('✅ Redirect created! Slug: '+data.slug);destInput.value='';loadRedirects();loadAnalytics();}
+    else alert('❌ Failed to create redirect: '+(data.error||'Unknown error'));
+  }catch(err){console.error(err); alert('❌ Failed to create redirect: '+err.message);}
 }
 
-// Initialize
 loadRedirects();
 loadAnalytics();
-</script>
-</body>
-</html>
