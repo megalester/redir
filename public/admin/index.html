@@ -80,6 +80,7 @@
 </div>
 
 <script>
+// DOM elements
 const destInput = document.getElementById('destUrl');
 const genBtn = document.getElementById('genBtn');
 const redirectsBody = document.getElementById('redirectsBody');
@@ -134,34 +135,50 @@ function renderRedirects(redirects){
 
 // Fetch redirects from API
 async function loadRedirects(){
-  const res = await fetch('/api/list');
-  const data = await res.json();
-  renderRedirects(data.redirects || []);
+  try {
+    const res = await fetch('/api/list');
+    const data = await res.json();
+    renderRedirects(data.redirects || []);
+  } catch(err) {
+    redirectsArea.innerText = 'Failed to load redirects';
+  }
 }
 
 // Delete redirect via API
 async function deleteRedirect(slug){
   if(!confirm("Delete redirect "+slug+"?")) return;
-  await fetch('/api/add', { method: 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({slug,delete:true}) });
-  loadRedirects();
+  try {
+    await fetch('/api/add', { 
+      method:'POST', 
+      headers:{'Content-Type':'application/json'}, 
+      body:JSON.stringify({slug,delete:true}) 
+    });
+    loadRedirects();
+  } catch(err){
+    alert('Failed to delete redirect: '+err.message);
+  }
 }
 
 // Load analytics
 async function loadAnalytics(){
-  const res = await fetch('/api/analytics');
-  const data = await res.json();
-  const rows = data.analytics || [];
-  analyticsBody.innerHTML='';
-  rows.slice(-200).reverse().forEach(rec=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${new Date(rec.timestamp).toLocaleString()}</td>
-                    <td style="max-width:220px;word-break:break-all">${rec.slug}</td>
-                    <td>${rec.country||'XX'}</td>
-                    <td style="max-width:420px;word-break:break-all">${rec.ua||''}</td>`;
-    analyticsBody.appendChild(tr);
-  });
-  analyticsArea.innerText=`${rows.length} clicks recorded`;
-  analyticsTable.style.display=rows.length?'':'none';
+  try {
+    const res = await fetch('/api/analytics');
+    const data = await res.json();
+    const rows = data.analytics || [];
+    analyticsBody.innerHTML='';
+    rows.slice(-200).reverse().forEach(rec=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${new Date(rec.timestamp).toLocaleString()}</td>
+                      <td style="max-width:220px;word-break:break-all">${rec.slug}</td>
+                      <td>${rec.country||'XX'}</td>
+                      <td style="max-width:420px;word-break:break-all">${rec.ua||''}</td>`;
+      analyticsBody.appendChild(tr);
+    });
+    analyticsArea.innerText=`${rows.length} clicks recorded`;
+    analyticsTable.style.display=rows.length?'':'none';
+  } catch(err){
+    analyticsArea.innerText='Failed to load analytics';
+  }
 }
 
 // Generate redirect
@@ -170,15 +187,24 @@ genBtn.onclick = async ()=>{
   if(!destination) return alert('Enter destination URL');
   const slug = generateSlug();
   const subdomain = pickSubdomain(slug);
-  await fetch('/api/add',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({slug,destination,subdomain})
-  });
-  alert('✅ Redirect created! Slug: '+slug);
-  destInput.value='';
-  loadRedirects();
-  loadAnalytics();
+  try {
+    const res = await fetch('/api/add',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({slug,destination,subdomain})
+    });
+    const data = await res.json();
+    if(data.success){
+      alert('✅ Redirect created! Slug: '+slug);
+      destInput.value='';
+      loadRedirects();
+      loadAnalytics();
+    } else {
+      alert('❌ Failed to create redirect: '+data.error);
+    }
+  } catch(err){
+    alert('❌ Failed to create redirect: '+err.message);
+  }
 }
 
 // Initialize
