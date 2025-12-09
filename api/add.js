@@ -6,32 +6,29 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'POST only' });
-  }
+  if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
   try {
     const { slug, destination, subdomain, delete: del } = req.body;
 
+    // Log environment variables for debugging
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('Missing Supabase env vars');
+      return res.status(500).json({ error: 'Supabase environment variables not set' });
+    }
+
     if (del) {
-      // Delete redirect
-      const { error } = await supabase
-        .from('redirects')
-        .delete()
-        .eq('slug', slug);
+      const { error } = await supabase.from('redirects').delete().eq('slug', slug);
       if (error) throw error;
       return res.status(200).json({ success: true });
     }
 
-    // Insert new redirect
-    const { error } = await supabase.from('redirects').insert([
-      { slug, destination, subdomain }
-    ]);
-
+    const { error } = await supabase.from('redirects').insert([{ slug, destination, subdomain }]);
     if (error) throw error;
 
-    res.status(200).json({ success: true, slug });
+    return res.status(200).json({ success: true, slug });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Supabase error:', err);
+    return res.status(500).json({ error: err.message || 'Server error' });
   }
 }
