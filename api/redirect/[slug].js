@@ -1,28 +1,43 @@
-import { kv } from "@vercel/kv";
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 export default async function handler(req, res) {
   const { slug } = req.query;
 
   try {
-    const redirects = (await kv.get("redirects")) || [];
-    const redirect = redirects.find(r => r.slug === slug);
+    // Lookup redirect
+    const { data, error } = await supabase
+      .from('redirects')
+      .select('*')
+      .eq('slug', slug)
+      .single();
 
-    if (!redirect) return res.status(404).send("Redirect not found");
+    if (error || !data) {
+      return res.status(404).send('Redirect not found');
+    }
 
-    // Log click
-    let analytics = (await kv.get("analytics")) || [];
-    analytics.push({
-      slug,
-      timestamp: Date.now(),
-      ua: req.headers["user-agent"] || "",
-      country: req.headers["x-vercel-ip-country"] || "XX",
-    });
-    // Keep only last 200 clicks
-    analytics = analytics.slice(-200);
-    await kv.set("analytics", analytics);
+    // Log analytics
+    const ua = req.headers['user-agent'] || '';
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const country = req.headers['x-vercel-ip-country'] || 'XX';
+
+    await supabase.from('analytics').insert([
+      {
+        slug,
+        ua,
+        ip,
+        country,
+        timestamp: new Date()
+      }
+    ]);
 
     // Redirect
-    res.redirect(302, redirect.destination);
+    res.writeHead(302, { Location: data.destination });
+    res.end();
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
