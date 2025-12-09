@@ -1,21 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return res.status(500).json({ error: 'Supabase env vars missing' });
-  }
-
-  const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
-
   try {
-    const { data, error } = await supabase.from('redirects').select('*').order('created_at', { ascending: false });
-    if (error) return res.status(500).json({ error: error.message });
-    res.status(200).json({ redirects: data });
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    const { data, error } = await supabase
+      .from('redirects')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    res.status(200).json({ redirects: data || [] });
   } catch (err) {
-    console.error('List redirects error:', err);
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 }
