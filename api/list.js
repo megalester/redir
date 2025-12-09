@@ -1,9 +1,20 @@
-import { kv } from "@vercel/kv";
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 export default async function handler(req, res) {
   try {
-    const redirects = (await kv.get("redirects")) || [];
-    res.status(200).json({ redirects });
+    const { data, error } = await supabase
+      .from('redirects')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    res.status(200).json({ redirects: data });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
