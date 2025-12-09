@@ -1,44 +1,35 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
 export default async function handler(req, res) {
-  const { slug } = req.query;
-
   try {
-    // Lookup redirect
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    const { slug } = req.query;
+
     const { data, error } = await supabase
       .from('redirects')
       .select('*')
       .eq('slug', slug)
       .single();
 
-    if (error || !data) {
-      return res.status(404).send('Redirect not found');
-    }
+    if (error || !data) return res.status(404).send('Redirect not found');
 
     // Log analytics
-    const ua = req.headers['user-agent'] || '';
-    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-    const country = req.headers['x-vercel-ip-country'] || 'XX';
-
     await supabase.from('analytics').insert([
       {
         slug,
-        ua,
-        ip,
-        country,
-        timestamp: new Date()
+        timestamp: new Date(),
+        country: req.headers['x-vercel-ip-country'] || 'XX',
+        ua: req.headers['user-agent'] || ''
       }
     ]);
 
-    // Redirect
-    res.writeHead(302, { Location: data.destination });
-    res.end();
+    res.redirect(data.destination);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).send('Server error');
   }
 }
