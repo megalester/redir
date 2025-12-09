@@ -1,17 +1,3 @@
-{
-  "name": "redirect-system",
-  "version": "1.0.0",
-  "description": "Vercel KV-based redirect system with admin panel and analytics",
-  "main": "index.js",
-  "type": "module",
-  "scripts": {
-    "dev": "vercel dev",
-    "start": "vercel dev"
-  },
-  "dependencies": {
-    "@vercel/kv": "^1.0.0"
-  },
-  "keywords": ["redirect", "vercel", "kv", "analytics"],
-  "author": "Your Name",
-  "license": "MIT"
+"dependencies": {
+  "@supabase/supabase-js": "^2.35.0"
 }
