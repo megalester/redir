@@ -1,25 +1,28 @@
 import { kv } from "@vercel/kv";
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "POST only" });
+  }
 
   try {
-    const { slug, destination, subdomain, delete: del } = await req.json();
-    let redirects = (await kv.get("redirects")) || [];
+    const { slug, destination } = JSON.parse(req.body);
 
-    if (del) {
-      // Delete redirect
-      redirects = redirects.filter(r => r.slug !== slug);
-      await kv.set("redirects", redirects);
-      return res.status(200).json({ success: true });
-    }
+    // Get existing redirects from KV
+    const redirects = (await kv.get("redirects")) || [];
 
     // Add new redirect
-    redirects.push({ slug, destination, subdomain, created: Date.now() });
+    redirects.push({
+      slug,
+      destination,
+      created: new Date().toISOString(),
+    });
+
+    // Save back to KV
     await kv.set("redirects", redirects);
 
-    res.status(200).json({ success: true, slug });
+    return res.status(200).json({ success: true, slug });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 }
