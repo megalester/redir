@@ -6,16 +6,15 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
-  try {
-    const { data, error } = await supabase
-      .from('redirects')
-      .select('*')
-      .order('created_at', { ascending: false });
+  if (req.method !== 'GET') return res.status(405).json({ error: 'GET only' });
 
+  try {
+    const { data, error } = await supabase.from('redirects').select('*').order('created_at', { ascending: false });
     if (error) throw error;
 
-    res.status(200).json({ redirects: data });
+    res.status(200).json({ redirects: data || [] });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Supabase error:', err);
+    res.status(500).json({ error: err.message || 'Server error' });
   }
 }
