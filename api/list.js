@@ -1,3 +1,4 @@
+// /api/list.js
 import { supabase } from './supabaseClient.js';
 
 export default async function handler(req, res) {
